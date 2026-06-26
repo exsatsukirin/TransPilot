@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.exsatsukirin.transpilot.data.TranslationRecord
 import java.text.SimpleDateFormat
 import java.util.*
@@ -23,9 +24,12 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(viewModel: TranslatorViewModel) {
-    val history by viewModel.history.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val showFavoritesOnly by viewModel.showFavoritesOnly.collectAsState()
+    val isFiltered = searchQuery.isNotBlank() || showFavoritesOnly
+
+    val pagedItems = viewModel.pagedHistory.collectAsLazyPagingItems()
+    val history by viewModel.history.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
         // ── Search bar ──
@@ -63,7 +67,8 @@ fun HistoryScreen(viewModel: TranslatorViewModel) {
         }
 
         // ── List ──
-        if (history.isEmpty()) {
+        val showEmpty = (isFiltered && history.isEmpty()) || (!isFiltered && pagedItems.itemCount == 0)
+        if (showEmpty) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -84,28 +89,44 @@ fun HistoryScreen(viewModel: TranslatorViewModel) {
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(history, key = { it.id }) { record ->
-                    val isExpanded = record.id in expandedIds
-                    HistoryItem(
-                        record = record,
-                        isExpanded = isExpanded,
-                        onToggle = {
-                            val wasExpanded = isExpanded
-                            expandedIds = if (wasExpanded) expandedIds - record.id
-                                          else expandedIds + record.id
-                            // When collapsing, scroll item into view to keep place
-                            if (wasExpanded) {
-                                val idx = history.indexOf(record)
-                                if (idx >= 0) {
-                                    coroutineScope.launch {
-                                        listState.animateScrollToItem(idx)
+                if (isFiltered) {
+                    items(history, key = { it.id }) { record ->
+                        val isExpanded = record.id in expandedIds
+                        HistoryItem(
+                            record = record,
+                            isExpanded = isExpanded,
+                            onToggle = {
+                                val wasExpanded = isExpanded
+                                expandedIds = if (wasExpanded) expandedIds - record.id else expandedIds + record.id
+                                if (wasExpanded) {
+                                    val idx = history.indexOf(record)
+                                    if (idx >= 0) {
+                                        coroutineScope.launch { listState.animateScrollToItem(idx) }
                                     }
                                 }
-                            }
-                        },
-                        onToggleFavorite = { viewModel.toggleFavorite(record) },
-                        onDelete = { viewModel.deleteRecord(record) }
-                    )
+                            },
+                            onToggleFavorite = { viewModel.toggleFavorite(record) },
+                            onDelete = { viewModel.deleteRecord(record) }
+                        )
+                    }
+                } else {
+                    items(pagedItems.itemCount) { index ->
+                        val record = pagedItems[index] ?: return@items
+                        val isExpanded = record.id in expandedIds
+                        HistoryItem(
+                            record = record,
+                            isExpanded = isExpanded,
+                            onToggle = {
+                                val wasExpanded = isExpanded
+                                expandedIds = if (wasExpanded) expandedIds - record.id else expandedIds + record.id
+                                if (wasExpanded) {
+                                    coroutineScope.launch { listState.animateScrollToItem(index) }
+                                }
+                            },
+                            onToggleFavorite = { viewModel.toggleFavorite(record) },
+                            onDelete = { viewModel.deleteRecord(record) }
+                        )
+                    }
                 }
             }
         }

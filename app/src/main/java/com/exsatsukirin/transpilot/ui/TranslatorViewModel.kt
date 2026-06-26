@@ -8,6 +8,10 @@ import com.exsatsukirin.transpilot.network.LlmClient
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 
 class TranslatorViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
@@ -74,6 +78,13 @@ class TranslatorViewModel(application: Application) : AndroidViewModel(applicati
         }
         list
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Paged history for efficient first-load performance. */
+    val pagedHistory: Flow<PagingData<TranslationRecord>> = Pager(
+        config = PagingConfig(pageSize = 30, enablePlaceholders = false)
+    ) {
+        dao.getAllPaging()
+    }.flow.cachedIn(viewModelScope)
 
     fun setSourceText(text: String) { _sourceText.value = text }
     fun setTranslatedText(text: String) { _translatedText.value = text }

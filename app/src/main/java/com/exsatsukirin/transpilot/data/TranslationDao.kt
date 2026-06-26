@@ -1,10 +1,15 @@
 package com.exsatsukirin.transpilot.data
 
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TranslationDao {
+    @Query("SELECT * FROM translations ORDER BY timestamp DESC")
+    fun getAllPaging(): PagingSource<Int, TranslationRecord>
+
     @Query("SELECT * FROM translations ORDER BY timestamp DESC")
     fun getAll(): Flow<List<TranslationRecord>>
 
@@ -16,6 +21,12 @@ interface TranslationDao {
 
     @Insert
     suspend fun insert(record: TranslationRecord): Long
+
+    @Insert
+    suspend fun insertAll(records: List<TranslationRecord>)
+
+    @Query("SELECT COUNT(*) FROM translations")
+    suspend fun count(): Int
 
     @Update
     suspend fun update(record: TranslationRecord)
