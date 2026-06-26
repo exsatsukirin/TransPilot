@@ -52,9 +52,6 @@ class TranslatorViewModel(application: Application) : AndroidViewModel(applicati
     val themeMode: StateFlow<String> = configRepo.themeMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "system")
 
-    private val _overlayEnabled = MutableStateFlow(false)
-    val overlayEnabled: StateFlow<Boolean> = _overlayEnabled.asStateFlow()
-
     private val _isTranslating = MutableStateFlow(false)
     val isTranslating: StateFlow<Boolean> = _isTranslating
 
@@ -189,27 +186,6 @@ class TranslatorViewModel(application: Application) : AndroidViewModel(applicati
     fun setThemeMode(mode: String) {
         viewModelScope.launch {
             configRepo.setThemeMode(mode)
-        }
-    }
-
-    fun setOverlayEnabled(enabled: Boolean) {
-        _overlayEnabled.value = enabled
-        val app = getApplication<Application>()
-        viewModelScope.launch {
-            if (enabled) {
-                try {
-                    val intent = android.content.Intent(app, com.exsatsukirin.transpilot.ui.ScreenCaptureService::class.java)
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                        app.startForegroundService(intent)
-                    } else {
-                        app.startService(intent)
-                    }
-                } catch (e: Exception) {
-                    _overlayEnabled.value = false
-                }
-            } else {
-                app.stopService(android.content.Intent(app, com.exsatsukirin.transpilot.ui.ScreenCaptureService::class.java))
-            }
         }
     }
 }

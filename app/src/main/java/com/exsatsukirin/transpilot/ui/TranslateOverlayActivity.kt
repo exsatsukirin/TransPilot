@@ -45,19 +45,12 @@ class TranslateOverlayActivity : ComponentActivity() {
     }
 
     companion object {
-        const val EXTRA_TRANSLATED_TEXT = "translated_text"
-
         private fun readProcessTextIntent(intent: Intent): String? {
-            // First try PROCESS_TEXT (from system text selection)
             if (intent.action == Intent.ACTION_PROCESS_TEXT) {
-                val text = intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)
+                return intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)
                     ?.toString()
                     ?.trim()
-                if (!text.isNullOrBlank()) return text
             }
-            // Fallback: custom extra (from screen capture service)
-            val text = intent.getStringExtra(EXTRA_TRANSLATED_TEXT)
-            if (!text.isNullOrBlank()) return text
             return null
         }
     }
