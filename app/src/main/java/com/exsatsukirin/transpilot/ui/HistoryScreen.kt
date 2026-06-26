@@ -12,10 +12,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.paging.compose.collectAsLazyPagingItems
+import com.exsatsukirin.transpilot.R
 import com.exsatsukirin.transpilot.data.TranslationRecord
 import java.text.SimpleDateFormat
 import java.util.*
@@ -26,9 +28,8 @@ import kotlinx.coroutines.launch
 fun HistoryScreen(viewModel: TranslatorViewModel) {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val showFavoritesOnly by viewModel.showFavoritesOnly.collectAsState()
-    val isFiltered = searchQuery.isNotBlank() || showFavoritesOnly
 
-    val pagedItems = viewModel.pagedHistory.collectAsLazyPagingItems()
+    val pagedItems = viewModel.filteredPagedHistory.collectAsLazyPagingItems()
     val history by viewModel.history.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -36,7 +37,7 @@ fun HistoryScreen(viewModel: TranslatorViewModel) {
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { viewModel.setSearchQuery(it) },
-            label = { Text("搜索历史") },
+            label = { Text(stringResource(R.string.search_history)) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -53,7 +54,7 @@ fun HistoryScreen(viewModel: TranslatorViewModel) {
             FilterChip(
                 selected = showFavoritesOnly,
                 onClick = { viewModel.setShowFavoritesOnly(!showFavoritesOnly) },
-                label = { Text("仅收藏") },
+                label = { Text(stringResource(R.string.favorites_only)) },
                 leadingIcon = if (showFavoritesOnly) {
                     { Icon(Icons.Default.Favorite, contentDescription = null, modifier = Modifier.size(18.dp)) }
                 } else null
@@ -61,20 +62,19 @@ fun HistoryScreen(viewModel: TranslatorViewModel) {
             Spacer(modifier = Modifier.weight(1f))
             if (history.isNotEmpty()) {
                 TextButton(onClick = { viewModel.clearHistory() }) {
-                    Text("清空历史", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.clear_history), color = MaterialTheme.colorScheme.error)
                 }
             }
         }
 
         // ── List ──
-        val showEmpty = (isFiltered && history.isEmpty()) || (!isFiltered && pagedItems.itemCount == 0)
-        if (showEmpty) {
+        if (pagedItems.itemCount == 0 && pagedItems.loadState.refresh !is androidx.paging.LoadState.Loading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    if (showFavoritesOnly) "暂无收藏" else "暂无翻译历史",
+                    if (showFavoritesOnly) stringResource(R.string.no_favorites) else stringResource(R.string.no_history),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -89,44 +89,22 @@ fun HistoryScreen(viewModel: TranslatorViewModel) {
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (isFiltered) {
-                    items(history, key = { it.id }) { record ->
-                        val isExpanded = record.id in expandedIds
-                        HistoryItem(
-                            record = record,
-                            isExpanded = isExpanded,
-                            onToggle = {
-                                val wasExpanded = isExpanded
-                                expandedIds = if (wasExpanded) expandedIds - record.id else expandedIds + record.id
-                                if (wasExpanded) {
-                                    val idx = history.indexOf(record)
-                                    if (idx >= 0) {
-                                        coroutineScope.launch { listState.animateScrollToItem(idx) }
-                                    }
-                                }
-                            },
-                            onToggleFavorite = { viewModel.toggleFavorite(record) },
-                            onDelete = { viewModel.deleteRecord(record) }
-                        )
-                    }
-                } else {
-                    items(pagedItems.itemCount) { index ->
-                        val record = pagedItems[index] ?: return@items
-                        val isExpanded = record.id in expandedIds
-                        HistoryItem(
-                            record = record,
-                            isExpanded = isExpanded,
-                            onToggle = {
-                                val wasExpanded = isExpanded
-                                expandedIds = if (wasExpanded) expandedIds - record.id else expandedIds + record.id
-                                if (wasExpanded) {
-                                    coroutineScope.launch { listState.animateScrollToItem(index) }
-                                }
-                            },
-                            onToggleFavorite = { viewModel.toggleFavorite(record) },
-                            onDelete = { viewModel.deleteRecord(record) }
-                        )
-                    }
+                items(pagedItems.itemCount) { index ->
+                    val record = pagedItems[index] ?: return@items
+                    val isExpanded = record.id in expandedIds
+                    HistoryItem(
+                        record = record,
+                        isExpanded = isExpanded,
+                        onToggle = {
+                            val wasExpanded = isExpanded
+                            expandedIds = if (wasExpanded) expandedIds - record.id else expandedIds + record.id
+                            if (wasExpanded) {
+                                coroutineScope.launch { listState.animateScrollToItem(index) }
+                            }
+                        },
+                        onToggleFavorite = { viewModel.toggleFavorite(record) },
+                        onDelete = { viewModel.deleteRecord(record) }
+                    )
                 }
             }
         }
@@ -195,7 +173,7 @@ fun HistoryItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    if (isExpanded) "收起" else "展开全文",
+                    if (isExpanded) stringResource(R.string.collapse) else stringResource(R.string.expand),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -203,7 +181,7 @@ fun HistoryItem(
                 IconButton(onClick = onToggleFavorite) {
                     Icon(
                         if (record.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = if (record.isFavorite) "取消收藏" else "收藏",
+                        contentDescription = if (record.isFavorite) stringResource(R.string.remove_favorite) else stringResource(R.string.add_favorite),
                         tint = if (record.isFavorite) MaterialTheme.colorScheme.error
                                else MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -211,7 +189,7 @@ fun HistoryItem(
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = "删除",
+                        contentDescription = stringResource(R.string.delete_entry),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

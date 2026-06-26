@@ -7,8 +7,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.exsatsukirin.transpilot.BuildConfig
+import com.exsatsukirin.transpilot.R
 import com.exsatsukirin.transpilot.data.ApiConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,7 +29,11 @@ fun SettingsScreen(viewModel: TranslatorViewModel) {
     var systemPrompt by remember(config) { mutableStateOf(config.systemPrompt) }
     var saved by remember { mutableStateOf(false) }
 
-    val themeOptions = listOf("浅色", "深色", "跟随系统")
+    val themeOptions = listOf(
+        stringResource(R.string.theme_light),
+        stringResource(R.string.theme_dark),
+        stringResource(R.string.theme_system)
+    )
     val themeValues = listOf("light", "dark", "system")
 
     Column(
@@ -39,7 +45,7 @@ fun SettingsScreen(viewModel: TranslatorViewModel) {
         // ════════════════════════════════════════
         // Section 1: 深色模式
         // ════════════════════════════════════════
-        Text("深色模式", style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.theme_mode), style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(12.dp))
 
         Row(
@@ -64,13 +70,13 @@ fun SettingsScreen(viewModel: TranslatorViewModel) {
         // ════════════════════════════════════════
         // Section 2: API 设置
         // ════════════════════════════════════════
-        Text("API 设置", style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.api_settings), style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
             value = endpoint,
             onValueChange = { endpoint = it; saved = false },
-            label = { Text("API 端点") },
+            label = { Text(stringResource(R.string.api_endpoint)) },
             placeholder = { Text("https://api.openai.com/v1/chat/completions") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
@@ -80,7 +86,7 @@ fun SettingsScreen(viewModel: TranslatorViewModel) {
         OutlinedTextField(
             value = apiKey,
             onValueChange = { apiKey = it; saved = false },
-            label = { Text("API Key") },
+            label = { Text(stringResource(R.string.api_key)) },
             placeholder = { Text("sk-...") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
@@ -90,16 +96,16 @@ fun SettingsScreen(viewModel: TranslatorViewModel) {
         OutlinedTextField(
             value = model,
             onValueChange = { model = it; saved = false },
-            label = { Text("模型") },
+            label = { Text(stringResource(R.string.api_model)) },
             placeholder = { Text("gpt-4o-mini") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
         Spacer(modifier = Modifier.height(20.dp))
 
-        Text("系统提示词", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.system_prompt), style = MaterialTheme.typography.titleMedium)
         Text(
-            "使用 {source} 和 {target} 作为占位符",
+            stringResource(R.string.system_prompt_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -121,11 +127,11 @@ fun SettingsScreen(viewModel: TranslatorViewModel) {
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("保存配置")
+            Text(stringResource(R.string.save_config))
         }
         if (saved) {
             Spacer(modifier = Modifier.height(8.dp))
-            Text("配置已保存 ✓", color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.config_saved), color = MaterialTheme.colorScheme.primary)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -135,18 +141,16 @@ fun SettingsScreen(viewModel: TranslatorViewModel) {
         // ════════════════════════════════════════
         // Section 3: 关于
         // ════════════════════════════════════════
-        Text("关于", style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.about), style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(16.dp))
 
-        SettingsInfoRow(label = "应用名称", value = "TransPilot")
-        SettingsInfoRow(label = "版本", value = BuildConfig.VERSION_NAME)
-        SettingsInfoRow(label = "包名", value = BuildConfig.APPLICATION_ID)
-        SettingsInfoRow(label = "开源许可", value = "MIT License")
+        SettingsInfoRow(label = stringResource(R.string.about_app_name), value = "TransPilot")
+        SettingsInfoRow(label = stringResource(R.string.about_version), value = BuildConfig.VERSION_NAME)
+        SettingsInfoRow(label = stringResource(R.string.about_package), value = BuildConfig.APPLICATION_ID)
+        SettingsInfoRow(label = stringResource(R.string.about_license), value = stringResource(R.string.license_mit))
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            "TransPilot 是一个基于 LLM 的翻译助手。\n" +
-            "使用 Material Design 3 设计，支持动态取色。\n" +
-            "源码：github.com/exsatsukirin/TransPilot",
+            stringResource(R.string.about_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

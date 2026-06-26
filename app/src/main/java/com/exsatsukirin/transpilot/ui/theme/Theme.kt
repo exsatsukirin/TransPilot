@@ -1,7 +1,7 @@
 package com.exsatsukirin.transpilot.ui.theme
 
+import android.content.res.Configuration
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -49,7 +49,8 @@ fun TransPilotTheme(
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val systemDark = isSystemInDarkTheme()
+    val context = LocalContext.current
+    val systemDark = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
     val darkTheme = when (themeMode) {
         "dark" -> true
         "light" -> false
@@ -57,7 +58,6 @@ fun TransPilotTheme(
     }
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context)
             else dynamicLightColorScheme(context)
         }

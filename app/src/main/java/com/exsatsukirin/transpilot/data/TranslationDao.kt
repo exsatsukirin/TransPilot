@@ -1,7 +1,6 @@
 package com.exsatsukirin.transpilot.data
 
 import androidx.paging.PagingSource
-import androidx.paging.PagingState
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
@@ -18,6 +17,9 @@ interface TranslationDao {
 
     @Query("SELECT * FROM translations WHERE sourceText LIKE '%' || :query || '%' OR translatedText LIKE '%' || :query || '%' ORDER BY timestamp DESC")
     fun search(query: String): Flow<List<TranslationRecord>>
+
+    @Query("SELECT * FROM translations WHERE (:favOnly = 0 OR isFavorite = 1) AND (:query = '' OR sourceText LIKE '%' || :query || '%' OR translatedText LIKE '%' || :query || '%') ORDER BY timestamp DESC")
+    fun getAllPagingFiltered(query: String, favOnly: Int): PagingSource<Int, TranslationRecord>
 
     @Insert
     suspend fun insert(record: TranslationRecord): Long

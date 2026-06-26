@@ -4,10 +4,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.exsatsukirin.transpilot.data.*
+import com.exsatsukirin.transpilot.network.ApiException
 import com.exsatsukirin.transpilot.network.LlmClient
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import org.json.JSONObject
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
@@ -86,6 +86,19 @@ class TranslatorViewModel(application: Application) : AndroidViewModel(applicati
         dao.getAllPaging()
     }.flow.cachedIn(viewModelScope)
 
+    /** Paged history with current filter applied. Reacts to search/favorite changes. */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val filteredPagedHistory: Flow<PagingData<TranslationRecord>> =
+        combine(_searchQuery, _showFavoritesOnly) { query, favOnly ->
+            Pair(query, favOnly)
+        }.flatMapLatest { (query, favOnly) ->
+            Pager(
+                config = PagingConfig(pageSize = 30, enablePlaceholders = false)
+            ) {
+                dao.getAllPagingFiltered(query, if (favOnly) 1 else 0)
+            }.flow
+        }.cachedIn(viewModelScope)
+
     fun setSourceText(text: String) { _sourceText.value = text }
     fun setTranslatedText(text: String) { _translatedText.value = text }
     fun setSourceLang(lang: String) {
@@ -111,15 +124,7 @@ class TranslatorViewModel(application: Application) : AndroidViewModel(applicati
             val targetLang = this@TranslatorViewModel.targetLang.value
             // If auto-detect, rewrite system prompt to let LLM detect source
             val effectiveConfig = if (sourceLang == AUTO_DETECT) {
-                val basePrompt = apiConfig.value.systemPrompt
-                val autoPrompt = basePrompt
-                    .replace("{source}", "the source language")
-                    .replace("{target}", targetLang)
-                    .replace(
-                        "Translate the following text from the source language to",
-                        "Detect the source language of the following text and translate it to"
-                    )
-                apiConfig.value.copy(systemPrompt = autoPrompt)
+                apiConfig.value.buildAutoDetectConfig(targetLang)
             } else {
                 apiConfig.value
             }
@@ -137,22 +142,11 @@ class TranslatorViewModel(application: Application) : AndroidViewModel(applicati
                     )
                 )
             }.onFailure { e ->
-                val msg = e.message ?: "未知错误"
-                // Try to extract human-readable error from JSON API response
-                val userMsg = if (msg.startsWith("API error ")) {
-                    val jsonStart = msg.indexOf("{")
-                    if (jsonStart >= 0) {
-                        try {
-                            val errJson = JSONObject(msg.substring(jsonStart))
-                            val errObj = errJson.optJSONObject("error")
-                            if (errObj != null) {
-                                val errMsg = errObj.optString("message", "")
-                                val errCode = errObj.optString("code", "")
-                                if (errCode.isNotBlank()) "$errMsg ($errCode)" else errMsg
-                            } else msg
-                        } catch (_: Exception) { msg }
-                    } else msg
-                } else msg
+                val userMsg = if (e is ApiException) {
+                    LlmClient.parseErrorMessage(e.responseBody, e.httpCode)
+                } else {
+                    e.message ?: "未知错误"
+                }
                 _errorMessage.value = "翻译失败: $userMsg"
             }
             _isTranslating.value = false

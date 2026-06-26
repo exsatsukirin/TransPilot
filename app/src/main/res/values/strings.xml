@@ -1,4 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="transpilot_translate">TransPilot 翻译</string>
+
+    <!-- Navigation tabs -->
+    <string name="tab_translate">翻译</string>
+    <string name="tab_history">历史</string>
+    <string name="tab_settings">设置</string>
+    <string name="app_title">TransPilot</string>
+
+    <!-- Translate screen -->
+    <string name="source_lang">源语言</string>
+    <string name="target_lang">目标语言</string>
+    <string name="input_text">输入文本</string>
+    <string name="translating">翻译中…</string>
+    <string name="translate_action">翻译</string>
+    <string name="translation_result">翻译结果</string>
+    <string name="copy_result">复制译文</string>
+    <string name="copied">已复制</string>
+    <string name="swap_languages">交换语言</string>
+    <string name="auto_detect">自动检测</string>
+
+    <!-- History screen -->
+    <string name="search_history">搜索历史</string>
+    <string name="favorites_only">仅收藏</string>
+    <string name="clear_history">清空历史</string>
+    <string name="no_favorites">暂无收藏</string>
+    <string name="no_history">暂无翻译历史</string>
+    <string name="collapse">收起</string>
+    <string name="expand">展开全文</string>
+    <string name="remove_favorite">取消收藏</string>
+    <string name="add_favorite">收藏</string>
+    <string name="delete_entry">删除</string>
+
+    <!-- Settings screen -->
+    <string name="theme_mode">深色模式</string>
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
+    <string name="theme_system">跟随系统</string>
+    <string name="api_settings">API 设置</string>
+    <string name="api_endpoint">API 端点</string>
+    <string name="api_key">API Key</string>
+    <string name="api_model">模型</string>
+    <string name="system_prompt">系统提示词</string>
+    <string name="system_prompt_hint">使用 {source} 和 {target} 作为占位符</string>
+    <string name="save_config">保存配置</string>
+    <string name="config_saved">配置已保存 ✓</string>
+    <string name="about">关于</string>
+    <string name="about_app_name">应用名称</string>
+    <string name="about_version">版本</string>
+    <string name="about_package">包名</string>
+    <string name="about_license">开源许可</string>
+    <string name="license_mit">MIT License</string>
+    <string name="about_description">TransPilot 是一个基于 LLM 的翻译助手。\n使用 Material Design 3 设计，支持动态取色。\n源码：github.com/exsatsukirin/TransPilot</string>
+
+    <!-- Overlay -->
+    <string name="overlay_translating">TransPilot 翻译中…</string>
+    <string name="overlay_title">TransPilot 翻译</string>
+    <string name="close">关闭</string>
+    <string name="copy">复制</string>
+
+    <!-- Errors -->
+    <string name="error_empty_text">请输入要翻译的文本</string>
+    <string name="error_translate_failed">翻译失败</string>
+    <string name="error_unknown">未知错误</string>
 </resources>

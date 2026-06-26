@@ -13,9 +13,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.exsatsukirin.transpilot.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,7 +62,7 @@ fun TranslateScreen(viewModel: TranslatorViewModel) {
                     value = sourceLang,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("源语言") },
+                    label = { Text(stringResource(R.string.source_lang)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = sourceExpanded) },
                     modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
                 )
@@ -90,7 +92,7 @@ fun TranslateScreen(viewModel: TranslatorViewModel) {
                 },
                 enabled = sourceLang != TranslatorViewModel.AUTO_DETECT
             ) {
-                Icon(Icons.Default.SwapHoriz, contentDescription = "交换语言")
+                Icon(Icons.Default.SwapHoriz, contentDescription = stringResource(R.string.swap_languages))
             }
 
             ExposedDropdownMenuBox(
@@ -102,7 +104,7 @@ fun TranslateScreen(viewModel: TranslatorViewModel) {
                     value = targetLang,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("目标语言") },
+                    label = { Text(stringResource(R.string.target_lang)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = targetExpanded) },
                     modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
                 )
@@ -129,7 +131,7 @@ fun TranslateScreen(viewModel: TranslatorViewModel) {
         OutlinedTextField(
             value = sourceText,
             onValueChange = { viewModel.setSourceText(it) },
-            label = { Text("输入文本") },
+            label = { Text(stringResource(R.string.input_text)) },
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 120.dp),
@@ -151,9 +153,9 @@ fun TranslateScreen(viewModel: TranslatorViewModel) {
                     color = MaterialTheme.colorScheme.onPrimary
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("翻译中...")
+                Text(stringResource(R.string.translating))
             } else {
-                Text("翻译", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.translate_action), style = MaterialTheme.typography.titleMedium)
             }
         }
 
@@ -198,7 +200,7 @@ fun TranslateScreen(viewModel: TranslatorViewModel) {
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        "翻译结果",
+                        stringResource(R.string.translation_result),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -227,7 +229,7 @@ fun TranslateScreen(viewModel: TranslatorViewModel) {
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(if (copied.value) "已复制" else "复制译文")
+                            Text(if (copied.value) stringResource(R.string.copied) else stringResource(R.string.copy_result))
                         }
                     }
                 }

@@ -23,9 +23,13 @@ class ApiConfigRepository(private val context: Context) {
     }
 
     val config: Flow<ApiConfig> = context.dataStore.data.map { prefs ->
+        val encryptedKey = prefs[KEY_API_KEY]
+        val decryptedKey = if (!encryptedKey.isNullOrBlank()) {
+            EncryptedKeyStore.decrypt(context, encryptedKey)
+        } else ""
         ApiConfig(
             endpoint = prefs[KEY_ENDPOINT] ?: "https://api.openai.com/v1/chat/completions",
-            apiKey = prefs[KEY_API_KEY] ?: "",
+            apiKey = decryptedKey,
             model = prefs[KEY_MODEL] ?: "gpt-4o-mini",
             systemPrompt = prefs[KEY_SYSTEM_PROMPT] ?: "You are a professional translator. Translate the following text from {source} to {target}. Only return the translated text, no explanations."
         )
@@ -44,9 +48,12 @@ class ApiConfigRepository(private val context: Context) {
     }
 
     suspend fun update(config: ApiConfig) {
+        val encryptedKey = config.apiKey.trim().let { key ->
+            if (key.isNotEmpty()) EncryptedKeyStore.encrypt(context, key) else ""
+        }
         context.dataStore.edit { prefs ->
             prefs[KEY_ENDPOINT] = config.endpoint.trim()
-            prefs[KEY_API_KEY] = config.apiKey.trim()
+            prefs[KEY_API_KEY] = encryptedKey
             prefs[KEY_MODEL] = config.model.trim()
             prefs[KEY_SYSTEM_PROMPT] = config.systemPrompt.trim()
         }

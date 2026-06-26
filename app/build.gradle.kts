@@ -20,7 +20,11 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 
@@ -69,6 +73,9 @@ dependencies {
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // Security Crypto (encrypted API key storage)
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     // OkHttp
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

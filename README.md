@@ -2,7 +2,7 @@
 
 # TransPilot ✈️
 
-**AI-powered translation assistant — configurable LLM backend, translation history with favorites, running on Android.**
+**AI-powered translation assistant — configurable LLM backend, encrypted API key storage, translation history with pagination & favorites, floating translate overlay, running on Android.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-3DDC84?logo=android)
@@ -18,16 +18,19 @@
 - **LLM-Powered Translation** — Translate text using any OpenAI-compatible API (OpenAI, DeepSeek, local LLMs via Ollama, etc.)
 - **Auto Language Detection** — Let the LLM figure out the source language automatically
 - **Configurable Backend** — Custom API endpoint, API key, model name, and system prompt — all editable in-app
-- **Translation History** — Every translation is saved with source/target language and timestamp
+- **Encrypted API Key Storage** — API keys are encrypted via Android KeyStore (AES-256 GCM) before persisting to DataStore
+- **Automatic Retry** — Exponential backoff retry (2 attempts) on network errors, 5xx, and rate limits
+- **Translation History with Pagination** — History list uses Paging 3; loads 30 records at a time, smooth infinite scroll (no lag even with thousands of records)
 - **Favorites** — Star important translations for quick access
 - **Search** — Filter through history by keyword
+- **Floating Translate Overlay** — Select text in any other app → tap "TransPilot 翻译" in the context menu → floating dialog shows translation
 - **Persistent Settings** — Language preferences and API config survive app restarts
 
 ## 📸 Screenshots
 
-| Translate | History | Settings |
-|-----------|---------|----------|
-| Language selection, text input, AI translation | Search, filter favorites, delete entries | API config, custom prompt editing |
+| Translate | History | Settings | Floating Overlay |
+|-----------|---------|----------|------------------|
+| Language selection, text input, AI translation | Paginated list, expand/collapse, favorites, search, ripple fix | API config, encrypted key storage, theme mode | Text selection in any app → TransPilot |
 
 ## 🚀 Quick Start
 
@@ -55,44 +58,56 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 1. Open TransPilot → tap **Settings** (gear icon)
 2. Enter your API information:
-   - **API Endpoint** — e.g. `https://api.openai.com/v1/chat/completions`
-   - **API Key** — your secret key
-   - **Model** — e.g. `gpt-4o-mini`, `deepseek-chat`
+   - **API Endpoint** — e.g. `https://api.deepseek.com/v1/chat/completions`
+   - **API Key** — your secret key (automatically encrypted on save)
+   - **Model** — e.g. `deepseek-chat`, `gpt-4o-mini`
    - **System Prompt** — customize the translation instruction (use `{source}` and `{target}` as placeholders)
 3. Tap **Save**
 4. Go back to **Translate** tab, select languages, enter text, and tap **Translate**!
+
+### Quick Translate from Any App
+
+1. Select text in any app (browser, notes, etc.)
+2. In the context menu that appears, scroll and tap **TransPilot 翻译**
+3. A floating dialog shows the translation with a **copy** button
 
 ## 🏗️ Architecture
 
 ```
 TransPilot/
 ├── app/
-│   └── src/main/java/com/example/llmtranslator/
-│       ├── MainActivity.kt          # Single-activity entry, bottom nav
+│   └── src/main/java/com/exsatsukirin/transpilot/
+│       ├── MainActivity.kt              # Single-activity entry, bottom nav
 │       ├── data/
-│       │   ├── ApiConfig.kt          # API config data class
-│       │   ├── ApiConfigRepository.kt # DataStore persistence
-│       │   ├── TranslationRecord.kt   # Room entity
-│       │   ├── TranslationDao.kt      # Room DAO
-│       │   └── AppDatabase.kt         # Room database
+│       │   ├── ApiConfig.kt             # API config data class
+│       │   ├── ApiConfigRepository.kt   # DataStore persistence (encrypted key)
+│       │   ├── EncryptedKeyStore.kt     # Android KeyStore AES-256 GCM encryption
+│       │   ├── TranslationRecord.kt     # Room entity
+│       │   ├── TranslationDao.kt        # Room DAO (with PagingSource)
+│       │   └── AppDatabase.kt           # Room database
 │       ├── network/
-│       │   └── LlmClient.kt          # OkHttp → OpenAI-compatible API
+│       │   └── LlmClient.kt            # OkHttp → OpenAI-compatible API (with retry)
 │       └── ui/
-│           ├── TranslatorViewModel.kt # AndroidViewModel
-│           ├── TranslateScreen.kt     # Translation UI
-│           ├── HistoryScreen.kt       # History & favorites UI
-│           └── SettingsScreen.kt      # API settings UI
+│           ├── TranslatorViewModel.kt   # AndroidViewModel
+│           ├── TranslateScreen.kt       # Translation UI
+│           ├── HistoryScreen.kt         # Paginated history & favorites UI
+│           ├── SettingsScreen.kt        # API settings & theme UI
+│           └── TranslateOverlayActivity.kt  # Floating translate (PROCESS_TEXT)
 ├── build.gradle.kts
 ├── settings.gradle.kts
-└── gradle/wrapper/gradle-wrapper.properties
+└── MAINTENANCE.md                       # Developer maintenance guide
 ```
 
 | Layer | Technology |
 |-------|-----------|
-| UI | Jetpack Compose + Material 3 |
-| State | AndroidViewModel + StateFlow |
-| Local Storage | Room (translations) + DataStore (config/preferences) |
-| Network | OkHttp → OpenAI Chat Completions API |
+| UI | Jetpack Compose + Material 3 (Dynamic Color) |
+| State | AndroidViewModel + StateFlow (Eagerly / WhileSubscribed) |
+| Navigation | Bottom navigation — 3 tabs (Translate / History / Settings) |
+| Local Storage (translations) | Room + Paging 3 (page size: 30) |
+| Local Storage (config) | DataStore Preferences |
+| Key Encryption | Android KeyStore (AES-256 / GCM / NoPadding) |
+| Network | OkHttp → OpenAI Chat Completions API (2x retry, exponential backoff) |
+| Floating Translate | `Intent.ACTION_PROCESS_TEXT` + `Theme.Translucent` Activity |
 
 ## 🔧 Troubleshooting
 
@@ -111,6 +126,7 @@ export _JAVA_OPTIONS="-Dhttps.protocols=TLSv1.2,TLSv1.3 -Djdk.tls.client.protoco
 | 401 / `invalid_request_error` | Wrong API key or extra whitespace | Re-enter API key, ensure no leading/trailing spaces |
 | 404 | Wrong endpoint URL | Check the API endpoint matches your provider |
 | Model not found | Wrong model name | Verify the model name for your provider |
+| Repeated failures | Network intermittent | 2x retry with backoff built in — check connection |
 
 ## 📄 License
 

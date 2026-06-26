@@ -22,10 +22,16 @@ import androidx.compose.ui.unit.dp
 import com.exsatsukirin.transpilot.data.ApiConfigRepository
 import com.exsatsukirin.transpilot.data.AppDatabase
 import com.exsatsukirin.transpilot.data.TranslationRecord
+import com.exsatsukirin.transpilot.data.buildAutoDetectConfig
+import com.exsatsukirin.transpilot.network.ApiException
 import com.exsatsukirin.transpilot.network.LlmClient
 import com.exsatsukirin.transpilot.ui.theme.TransPilotTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
-import org.json.JSONObject
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class TranslateOverlayActivity : ComponentActivity() {
 
@@ -65,47 +71,53 @@ private fun TranslateOverlayContent(
     var isError by remember { mutableStateOf(false) }
     var targetLang by remember { mutableStateOf("") }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        try {
-            val configRepo = ApiConfigRepository(context.applicationContext)
-            val llmClient = LlmClient()
-            val dao = AppDatabase.getInstance(context.applicationContext).translationDao()
+    DisposableEffect(Unit) {
+        val job = Job()
+        CoroutineScope(job + Dispatchers.Main).launch {
+            try {
+                val configRepo = ApiConfigRepository(context.applicationContext)
+                val llmClient = LlmClient()
+                val dao = AppDatabase.getInstance(context.applicationContext).translationDao()
 
-            val config = configRepo.config.first()
-            targetLang = configRepo.targetLang.first()
+                val config = configRepo.config.first()
+                targetLang = configRepo.targetLang.first()
 
-            val autoPrompt = config.systemPrompt
-                .replace("{source}", "the source language")
-                .replace("{target}", targetLang)
-                .replace(
-                    "Translate the following text from the source language to",
-                    "Detect the source language of the following text and translate it to"
-                )
-            val effectiveConfig = config.copy(systemPrompt = autoPrompt)
+                val effectiveConfig = config.buildAutoDetectConfig(targetLang)
 
-            llmClient.translate(sourceText, "auto", targetLang, effectiveConfig)
-                .onSuccess { text ->
-                    result = text
-                    // Save to history
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        dao.insert(TranslationRecord(
-                            sourceText = sourceText,
-                            translatedText = text,
-                            sourceLang = "自动检测",
-                            targetLang = targetLang
-                        ))
+                llmClient.translate(sourceText, "auto", targetLang, effectiveConfig)
+                    .onSuccess { text ->
+                        result = text
+                        withContext(Dispatchers.IO) {
+                            dao.insert(
+                                TranslationRecord(
+                                    sourceText = sourceText,
+                                    translatedText = text,
+                                    sourceLang = "自动检测",
+                                    targetLang = targetLang
+                                )
+                            )
+                        }
                     }
-                }
-                .onFailure { e -> result = "翻译失败: ${parseError(e.message ?: "未知错误")}"; isError = true }
-        } catch (e: Exception) {
-            result = "翻译失败: ${e.message ?: e.javaClass.simpleName}"
-            isError = true
+                    .onFailure { e ->
+                        val userMsg = if (e is ApiException) {
+                            LlmClient.parseErrorMessage(e.responseBody, e.httpCode)
+                        } else {
+                            e.message ?: e.javaClass.simpleName
+                        }
+                        result = "翻译失败: $userMsg"
+                        isError = true
+                    }
+            } catch (e: Exception) {
+                result = "翻译失败: ${e.message ?: e.javaClass.simpleName}"
+                isError = true
+            }
         }
+        onDispose { job.cancel() }
     }
 
     if (result == null) {
-        // Loading state
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -165,7 +177,10 @@ private fun TranslateOverlayContent(
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
                         TextButton(onClick = {
                             clipboard.setText(AnnotatedString(translated))
                             copied = true
@@ -186,19 +201,4 @@ private fun TranslateOverlayContent(
             }
         )
     }
-}
-
-private fun parseError(msg: String): String {
-    val jsonStart = msg.indexOf("{")
-    if (jsonStart >= 0) {
-        try {
-            val errObj = JSONObject(msg.substring(jsonStart)).optJSONObject("error")
-            if (errObj != null) {
-                val errMsg = errObj.optString("message", "")
-                val errCode = errObj.optString("code", "")
-                return if (errCode.isNotBlank()) "$errMsg ($errCode)" else errMsg
-            }
-        } catch (_: Exception) {}
-    }
-    return msg
 }
