@@ -1,5 +1,6 @@
 package com.exsatsukirin.transpilot.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -73,14 +74,21 @@ fun HistoryScreen(viewModel: TranslatorViewModel) {
                 )
             }
         } else {
+            var expandedIds by remember { mutableStateOf(setOf<Long>()) }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(history, key = { it.id }) { record ->
+                    val isExpanded = record.id in expandedIds
                     HistoryItem(
                         record = record,
+                        isExpanded = isExpanded,
+                        onToggle = {
+                            expandedIds = if (isExpanded) expandedIds - record.id
+                                          else expandedIds + record.id
+                        },
                         onToggleFavorite = { viewModel.toggleFavorite(record) },
                         onDelete = { viewModel.deleteRecord(record) }
                     )
@@ -93,12 +101,18 @@ fun HistoryScreen(viewModel: TranslatorViewModel) {
 @Composable
 fun HistoryItem(
     record: TranslationRecord,
+    isExpanded: Boolean,
+    onToggle: () -> Unit,
     onToggleFavorite: () -> Unit,
     onDelete: () -> Unit
 ) {
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggle)
+    ) {
         Column(modifier = Modifier.padding(12.dp)) {
             // Header: langs + time
             Row(
@@ -125,8 +139,8 @@ fun HistoryItem(
             Text(
                 record.sourceText,
                 style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+                maxLines = if (isExpanded) Int.MAX_VALUE else 2,
+                overflow = if (isExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
@@ -136,15 +150,21 @@ fun HistoryItem(
             Text(
                 record.translatedText,
                 style = MaterialTheme.typography.bodyLarge,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
+                maxLines = if (isExpanded) Int.MAX_VALUE else 3,
+                overflow = if (isExpanded) TextOverflow.Visible else TextOverflow.Ellipsis
             )
 
-            // Actions
+            // Expand/collapse hint + actions
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Text(
+                    if (isExpanded) "收起" else "展开全文",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.weight(1f))
                 IconButton(onClick = onToggleFavorite) {
                     Icon(
                         if (record.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
