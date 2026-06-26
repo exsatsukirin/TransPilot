@@ -4,12 +4,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -205,6 +209,27 @@ fun TranslateScreen(viewModel: TranslatorViewModel) {
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        val clipboard = LocalClipboardManager.current
+                        val copied = remember { mutableStateOf(false) }
+                        TextButton(onClick = {
+                            clipboard.setText(AnnotatedString(translatedText))
+                            copied.value = true
+                        }) {
+                            Icon(
+                                if (copied.value) Icons.Default.Check
+                                else Icons.Default.ContentCopy,
+                                contentDescription = "复制译文",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(if (copied.value) "已复制" else "复制译文")
+                        }
+                    }
                 }
             }
         }

@@ -30,7 +30,7 @@ class TranslatorViewModel(application: Application) : AndroidViewModel(applicati
 
     /** Convenience derived flow (same atomic source). */
     val apiConfig: StateFlow<ApiConfig> = configState.map { it.config }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ApiConfig())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, ApiConfig())
 
     // ── Translate state ──
     private val _sourceText = MutableStateFlow("")

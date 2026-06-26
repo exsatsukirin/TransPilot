@@ -5,14 +5,21 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.exsatsukirin.transpilot.data.ApiConfigRepository
+import com.exsatsukirin.transpilot.data.AppDatabase
+import com.exsatsukirin.transpilot.data.TranslationRecord
 import com.exsatsukirin.transpilot.network.LlmClient
 import com.exsatsukirin.transpilot.ui.theme.TransPilotTheme
 import kotlinx.coroutines.flow.first
@@ -54,15 +61,17 @@ private fun TranslateOverlayContent(
 ) {
     var result by remember { mutableStateOf<String?>(null) }
     var isError by remember { mutableStateOf(false) }
+    var targetLang by remember { mutableStateOf("") }
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         try {
             val configRepo = ApiConfigRepository(context.applicationContext)
             val llmClient = LlmClient()
+            val dao = AppDatabase.getInstance(context.applicationContext).translationDao()
 
             val config = configRepo.config.first()
-            val targetLang = configRepo.targetLang.first()
+            targetLang = configRepo.targetLang.first()
 
             val autoPrompt = config.systemPrompt
                 .replace("{source}", "the source language")
@@ -74,7 +83,18 @@ private fun TranslateOverlayContent(
             val effectiveConfig = config.copy(systemPrompt = autoPrompt)
 
             llmClient.translate(sourceText, "auto", targetLang, effectiveConfig)
-                .onSuccess { text -> result = text }
+                .onSuccess { text ->
+                    result = text
+                    // Save to history
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        dao.insert(TranslationRecord(
+                            sourceText = sourceText,
+                            translatedText = text,
+                            sourceLang = "自动检测",
+                            targetLang = targetLang
+                        ))
+                    }
+                }
                 .onFailure { e -> result = "翻译失败: ${parseError(e.message ?: "未知错误")}"; isError = true }
         } catch (e: Exception) {
             result = "翻译失败: ${e.message ?: e.javaClass.simpleName}"
@@ -104,24 +124,56 @@ private fun TranslateOverlayContent(
                 }
             }
         }
-    } else {
+    } else if (isError) {
         AlertDialog(
             onDismissRequest = onDismiss,
             title = { Text("TransPilot 翻译") },
             text = {
                 Text(
                     text = result!!,
-                    style = if (isError) MaterialTheme.typography.bodyMedium
-                            else MaterialTheme.typography.bodyLarge,
-                    color = if (isError) MaterialTheme.colorScheme.error
-                            else MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Start
                 )
             },
             confirmButton = {
-                TextButton(onClick = onDismiss) {
-                    Text("关闭")
+                TextButton(onClick = onDismiss) { Text("关闭") }
+            }
+        )
+    } else {
+        val clipboard = LocalClipboardManager.current
+        var copied by remember { mutableStateOf(false) }
+        val translated = result!!
+
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("TransPilot 翻译") },
+            text = {
+                Column {
+                    Text(
+                        text = translated,
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Start
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = {
+                            clipboard.setText(AnnotatedString(translated))
+                            copied = true
+                        }) {
+                            Icon(
+                                if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
+                                contentDescription = "复制",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(if (copied) "已复制" else "复制译文")
+                        }
+                    }
                 }
+            },
+            confirmButton = {
+                TextButton(onClick = onDismiss) { Text("关闭") }
             }
         )
     }
