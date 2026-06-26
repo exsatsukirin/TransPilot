@@ -19,7 +19,17 @@ class TranslatorViewModel(application: Application) : AndroidViewModel(applicati
     private val llmClient = LlmClient()
 
     // ── Config ──
-    val apiConfig: StateFlow<ApiConfig> = configRepo.config
+    /** Single atomic state: holds both the ApiConfig and whether DataStore has loaded.
+     *  Using one StateFlow guarantees config and loaded update together, avoiding
+     *  race conditions that cause the floating-label animation on API Key. */
+    data class ConfigState(val config: ApiConfig, val loaded: Boolean)
+
+    val configState: StateFlow<ConfigState> = configRepo.config
+        .map { ConfigState(it, true) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, ConfigState(ApiConfig(), false))
+
+    /** Convenience derived flow (same atomic source). */
+    val apiConfig: StateFlow<ApiConfig> = configState.map { it.config }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ApiConfig())
 
     // ── Translate state ──

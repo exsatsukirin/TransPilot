@@ -14,8 +14,12 @@ import com.exsatsukirin.transpilot.data.ApiConfig
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(viewModel: TranslatorViewModel) {
-    val config by viewModel.apiConfig.collectAsState()
+    val configState by viewModel.configState.collectAsState()
+    val config = configState.config
+    val configLoaded = configState.loaded
     val themeMode by viewModel.themeMode.collectAsState()
+
+    if (!configLoaded) return
 
     var endpoint by remember(config) { mutableStateOf(config.endpoint) }
     var apiKey by remember(config) { mutableStateOf(config.apiKey) }
