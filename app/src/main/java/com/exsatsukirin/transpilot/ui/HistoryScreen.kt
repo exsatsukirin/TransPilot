@@ -1,6 +1,5 @@
 package com.exsatsukirin.transpilot.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -98,6 +97,7 @@ fun HistoryScreen(viewModel: TranslatorViewModel) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryItem(
     record: TranslationRecord,
@@ -109,9 +109,8 @@ fun HistoryItem(
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onToggle)
+        onClick = onToggle,
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             // Header: langs + time
