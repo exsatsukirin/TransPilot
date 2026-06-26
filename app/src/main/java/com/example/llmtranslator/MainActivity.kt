@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.llmtranslator.ui.*
+import com.example.llmtranslator.ui.theme.TransPilotTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -22,7 +23,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            LLMTranslatorTheme {
+            TransPilotTheme {
                 val viewModel: TranslatorViewModel = viewModel()
                 var selectedTab by remember { mutableStateOf(0) }
 
@@ -74,12 +75,4 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}
-
-@Composable
-fun LLMTranslatorTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = lightColorScheme(),
-        content = content
-    )
 }
