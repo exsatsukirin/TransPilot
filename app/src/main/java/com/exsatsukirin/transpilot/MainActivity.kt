@@ -23,8 +23,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            TransPilotTheme {
-                val viewModel: TranslatorViewModel = viewModel()
+            val viewModel: TranslatorViewModel = viewModel()
+            val themeMode by viewModel.themeMode.collectAsState()
+            TransPilotTheme(themeMode = themeMode) {
                 var selectedTab by remember { mutableStateOf(0) }
 
                 val tabs = listOf("翻译", "历史", "设置")

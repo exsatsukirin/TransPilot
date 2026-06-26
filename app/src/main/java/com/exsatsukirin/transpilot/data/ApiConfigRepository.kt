@@ -19,6 +19,7 @@ class ApiConfigRepository(private val context: Context) {
         val KEY_SYSTEM_PROMPT = stringPreferencesKey("system_prompt")
         val KEY_SOURCE_LANG = stringPreferencesKey("source_lang")
         val KEY_TARGET_LANG = stringPreferencesKey("target_lang")
+        val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
     }
 
     val config: Flow<ApiConfig> = context.dataStore.data.map { prefs ->
@@ -36,6 +37,10 @@ class ApiConfigRepository(private val context: Context) {
 
     val targetLang: Flow<String> = context.dataStore.data.map { prefs ->
         prefs[KEY_TARGET_LANG] ?: "Chinese"
+    }
+
+    val themeMode: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[KEY_THEME_MODE] ?: "system"
     }
 
     suspend fun update(config: ApiConfig) {
@@ -56,6 +61,12 @@ class ApiConfigRepository(private val context: Context) {
     suspend fun setTargetLang(lang: String) {
         context.dataStore.edit { prefs ->
             prefs[KEY_TARGET_LANG] = lang
+        }
+    }
+
+    suspend fun setThemeMode(mode: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_THEME_MODE] = mode
         }
     }
 }

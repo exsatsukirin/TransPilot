@@ -1,3 +1,141 @@
+# TransPilot — 设置页重构计划（深色模式 + API设置 + 关于）
+
+> **For Hermes:** 按 Task 顺序执行。每个 Task 完成后构建验证再继续。
+
+**Goal:** 将设置页从单一的 API 配置页面重构为三个分区的设置页面：深色模式控制、API 设置、关于信息。
+
+**Architecture:**
+- DataStore 新增 `theme_mode` key ("system"/"light"/"dark")
+- `Theme.kt` 接收 `themeMode` 参数替代直接调用 `isSystemInDarkTheme()`
+- `SettingsScreen.kt` 用 `HorizontalDivider` 分为三个视觉分区
+- ViewModel 暴露 `themeMode` 状态和 setter
+
+**Tech Stack:** Jetpack Compose, Material 3, DataStore Preferences
+
+---
+
+## 涉及文件
+
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `data/ApiConfigRepository.kt` | **Modify** | 新增 `themeMode` key/flow/setter |
+| `ui/theme/Theme.kt` | **Modify** | `darkTheme` 参数改为 `themeMode: String` |
+| `ui/TranslatorViewModel.kt` | **Modify** | 新增 `themeMode` StateFlow 和 `setThemeMode()` |
+| `ui/SettingsScreen.kt` | **Rewrite** | 三分区布局 |
+| `MainActivity.kt` | **Modify** | 读取 ViewModel 的 themeMode 并传给 TransPilotTheme |
+
+---
+
+## Task 1: DataStore 添加 themeMode
+
+**Objective:** 在 `ApiConfigRepository` 中新增深色模式偏好持久化。
+
+**Files:**
+- Modify: `data/ApiConfigRepository.kt`
+
+**Step 1:** 在 `companion object` 中添加 key
+```kotlin
+val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
+```
+
+**Step 2:** 添加 Flow
+```kotlin
+val themeMode: Flow<String> = context.dataStore.data.map { prefs ->
+    prefs[KEY_THEME_MODE] ?: "system"
+}
+```
+
+**Step 3:** 添加 setter
+```kotlin
+suspend fun setThemeMode(mode: String) {
+    context.dataStore.edit { prefs ->
+        prefs[KEY_THEME_MODE] = mode
+    }
+}
+```
+
+---
+
+## Task 2: Theme.kt 接受 themeMode 字符串
+
+**Objective:** `TransPilotTheme` 不再直接调用 `isSystemInDarkTheme()`，而是接受外部传入的 `themeMode`。
+
+**Files:**
+- Modify: `ui/theme/Theme.kt`
+
+**Step 1:** 修改函数签名
+```kotlin
+@Composable
+fun TransPilotTheme(
+    themeMode: String = "system",   // "system" | "light" | "dark"
+    dynamicColor: Boolean = true,
+    content: @Composable () -> Unit
+) {
+    val systemDark = isSystemInDarkTheme()
+    val darkTheme = when (themeMode) {
+        "dark" -> true
+        "light" -> false
+        else -> systemDark   // "system" 跟随系统
+    }
+    // ... 其余不变
+}
+```
+
+移除 `darkTheme: Boolean = isSystemInDarkTheme()` 参数，改为 `themeMode: String = "system"`。
+
+---
+
+## Task 3: ViewModel 暴露 themeMode
+
+**Objective:** ViewModel 连接 DataStore 与 UI。
+
+**Files:**
+- Modify: `ui/TranslatorViewModel.kt`
+
+**Step 1:** 添加 StateFlow
+```kotlin
+val themeMode: StateFlow<String> = configRepo.themeMode
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "system")
+```
+
+**Step 2:** 添加 setter
+```kotlin
+fun setThemeMode(mode: String) {
+    viewModelScope.launch { configRepo.setThemeMode(mode) }
+}
+```
+
+---
+
+## Task 4: MainActivity 传递 themeMode
+
+**Objective:** 读取 ViewModel 的 themeMode 并传给 Theme。
+
+**Files:**
+- Modify: `MainActivity.kt`
+
+**Step 1:** 在 `TransPilotTheme {` 上方读取 themeMode
+```kotlin
+setContent {
+    val themeMode by viewModel.themeMode.collectAsState()
+    TransPilotTheme(themeMode = themeMode) {
+        // ... 现有内容
+    }
+}
+```
+
+---
+
+## Task 5: 重写 SettingsScreen
+
+**Objective:** 三分区布局：深色模式 / API 设置 / 关于。
+
+**Files:**
+- Rewrite: `ui/SettingsScreen.kt`
+
+**Step 1: 完整代码**
+
+```kotlin
 package com.exsatsukirin.transpilot.ui
 
 import androidx.compose.foundation.layout.*
@@ -38,6 +176,7 @@ fun SettingsScreen(viewModel: TranslatorViewModel) {
         Text("深色模式", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(12.dp))
 
+        // Single-segment row using FilterChip
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -134,10 +273,14 @@ fun SettingsScreen(viewModel: TranslatorViewModel) {
         Text("关于", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Info rows
         SettingsInfoRow(label = "应用名称", value = "TransPilot")
         SettingsInfoRow(label = "版本", value = BuildConfig.VERSION_NAME)
         SettingsInfoRow(label = "包名", value = BuildConfig.APPLICATION_ID)
-        SettingsInfoRow(label = "开源许可", value = "MIT License")
+        SettingsInfoRow(
+            label = "开源许可",
+            value = "MIT License"
+        )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             "TransPilot 是一个基于 LLM 的翻译助手。\n" +
@@ -165,3 +308,33 @@ private fun SettingsInfoRow(label: String, value: String) {
         )
     }
 }
+```
+
+---
+
+## 执行顺序
+
+```
+Task 1: ApiConfigRepository.kt  ← DataStore 新增 3 行
+Task 2: Theme.kt                ← 修改函数签名 (4 行改动)
+Task 3: TranslatorViewModel.kt  ← 新增 4 行
+Task 4: MainActivity.kt         ← 新增 1 行 collectAsState + 传参
+Task 5: SettingsScreen.kt       ← 完全重写
+```
+
+## 验证清单
+
+- [ ] 构建通过：`gradle clean assembleDebug`
+- [ ] 安装后设置页显示三个分区（深色模式 / API 设置 / 关于）
+- [ ] 切换「浅色」→ UI 立即变为浅色
+- [ ] 切换「深色」→ UI 立即变为深色
+- [ ] 切换「跟随系统」→ 随系统设置而变化
+- [ ] 切换后杀进程重启，保留上次的选择
+- [ ] API 设置保存仍然正常
+- [ ] 关于页显示版本号 1.0
+
+## 风险和注意事项
+
+1. **`BuildConfig` 访问** — 需要 `import com.exsatsukirin.transpilot.BuildConfig`。在 AGP 8.7+ 默认启用非最终版本（debug）的 BuildConfig，应可直接使用。
+2. **`FilterChip` 的 weight(1f)** — 三个芯片等宽排列，在窄屏上可能文字截断。如果 "跟随系统" 显示不全，可将 `themeOptions` 缩写为 `themeValues` 映射。
+3. **`HorizontalDivider`** — 在 Material 3 中替代了旧的 `Divider`，如果编译报错，改用 `Divider()`（已废弃但可用）。

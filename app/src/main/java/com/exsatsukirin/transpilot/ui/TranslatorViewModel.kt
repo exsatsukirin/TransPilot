@@ -35,6 +35,9 @@ class TranslatorViewModel(application: Application) : AndroidViewModel(applicati
     val targetLang: StateFlow<String> = configRepo.targetLang
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Chinese")
 
+    val themeMode: StateFlow<String> = configRepo.themeMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "system")
+
     private val _isTranslating = MutableStateFlow(false)
     val isTranslating: StateFlow<Boolean> = _isTranslating
 
@@ -156,6 +159,12 @@ class TranslatorViewModel(application: Application) : AndroidViewModel(applicati
     fun updateConfig(config: ApiConfig) {
         viewModelScope.launch {
             configRepo.update(config)
+        }
+    }
+
+    fun setThemeMode(mode: String) {
+        viewModelScope.launch {
+            configRepo.setThemeMode(mode)
         }
     }
 }
