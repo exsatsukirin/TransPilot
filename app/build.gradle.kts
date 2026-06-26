@@ -6,12 +6,12 @@ plugins {
 }
 
 android {
-    namespace = "com.example.llmtranslator"
+    namespace = "com.exsatsukirin.transpilot"
     compileSdk = 35
     buildToolsVersion = "37.0.0"
 
     defaultConfig {
-        applicationId = "com.example.llmtranslator"
+        applicationId = "com.exsatsukirin.transpilot"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

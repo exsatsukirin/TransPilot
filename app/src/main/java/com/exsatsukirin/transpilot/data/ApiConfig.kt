@@ -1,4 +1,4 @@
-package com.example.llmtranslator.data
+package com.exsatsukirin.transpilot.data
 
 data class ApiConfig(
     val endpoint: String = "https://api.openai.com/v1/chat/completions",

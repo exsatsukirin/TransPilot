@@ -1,4 +1,4 @@
-package com.example.llmtranslator.data
+package com.exsatsukirin.transpilot.data
 
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow

@@ -1,10 +1,10 @@
-package com.example.llmtranslator.ui
+package com.exsatsukirin.transpilot.ui
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.llmtranslator.data.*
-import com.example.llmtranslator.network.LlmClient
+import com.exsatsukirin.transpilot.data.*
+import com.exsatsukirin.transpilot.network.LlmClient
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.json.JSONObject

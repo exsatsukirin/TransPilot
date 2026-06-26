@@ -1,4 +1,4 @@
-package com.example.llmtranslator.ui.theme
+package com.exsatsukirin.transpilot.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

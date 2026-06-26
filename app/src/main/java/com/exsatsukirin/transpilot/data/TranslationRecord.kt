@@ -1,4 +1,4 @@
-package com.example.llmtranslator.data
+package com.exsatsukirin.transpilot.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

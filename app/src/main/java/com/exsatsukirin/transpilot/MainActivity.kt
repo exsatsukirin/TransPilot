@@ -1,4 +1,4 @@
-package com.example.llmtranslator
+package com.exsatsukirin.transpilot
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -14,8 +14,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.llmtranslator.ui.*
-import com.example.llmtranslator.ui.theme.TransPilotTheme
+import com.exsatsukirin.transpilot.ui.*
+import com.exsatsukirin.transpilot.ui.theme.TransPilotTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {

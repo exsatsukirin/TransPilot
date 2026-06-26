@@ -1,4 +1,4 @@
-package com.example.llmtranslator.ui
+package com.exsatsukirin.transpilot.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState

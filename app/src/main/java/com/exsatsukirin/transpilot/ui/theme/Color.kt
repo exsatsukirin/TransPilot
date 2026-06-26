@@ -1,4 +1,4 @@
-package com.example.llmtranslator.ui.theme
+package com.exsatsukirin.transpilot.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

@@ -1,6 +1,6 @@
-package com.example.llmtranslator.network
+package com.exsatsukirin.transpilot.network
 
-import com.example.llmtranslator.data.ApiConfig
+import com.exsatsukirin.transpilot.data.ApiConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
