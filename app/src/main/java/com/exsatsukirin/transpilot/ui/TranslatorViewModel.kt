@@ -20,6 +20,7 @@ class TranslatorViewModel(application: Application) : AndroidViewModel(applicati
 
     private val dao = AppDatabase.getInstance(application).translationDao()
     private val configRepo = ApiConfigRepository(application)
+    private val presetRepo = PromptPresetRepository(application)
     private val llmClient = LlmClient()
 
     // ── Config ──
@@ -51,6 +52,25 @@ class TranslatorViewModel(application: Application) : AndroidViewModel(applicati
 
     val themeMode: StateFlow<String> = configRepo.themeMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "system")
+
+    // ── Prompt presets ──
+    val activePromptId: StateFlow<String> = presetRepo.activePresetId
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), PROMPT_DEFAULT.id)
+
+    val customPromptPresets: StateFlow<List<PromptPreset>> = presetRepo.customPresets
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Combined list: default preset first, then custom presets. */
+    val allPromptPresets: StateFlow<List<PromptPreset>> = customPromptPresets
+        .map { customs -> listOf(PROMPT_DEFAULT) + customs }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf(PROMPT_DEFAULT))
+
+    /** Resolve active preset prompt. */
+    private fun getActivePrompt(): String {
+        val presetId = activePromptId.value
+        if (presetId == PROMPT_DEFAULT.id) return PROMPT_DEFAULT.prompt
+        return customPromptPresets.value.find { it.id == presetId }?.prompt ?: PROMPT_DEFAULT.prompt
+    }
 
     private val _isTranslating = MutableStateFlow(false)
     val isTranslating: StateFlow<Boolean> = _isTranslating
@@ -124,9 +144,11 @@ class TranslatorViewModel(application: Application) : AndroidViewModel(applicati
             val targetLang = this@TranslatorViewModel.targetLang.value
             // If auto-detect, rewrite system prompt to let LLM detect source
             val effectiveConfig = if (sourceLang == AUTO_DETECT) {
-                apiConfig.value.buildAutoDetectConfig(targetLang)
+                apiConfig.value.copy(systemPrompt = getActivePrompt()).buildAutoDetectConfig(targetLang)
             } else {
-                apiConfig.value
+                apiConfig.value.copy(systemPrompt = getActivePrompt()
+                    .replace("{source}", sourceLang)
+                    .replace("{target}", targetLang))
             }
             val result = llmClient.translate(
                 text, sourceLang, targetLang, effectiveConfig
@@ -181,5 +203,29 @@ class TranslatorViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             configRepo.setThemeMode(mode)
         }
+    }
+
+    // ── Prompt presets ──
+    fun setActivePromptId(id: String) {
+        viewModelScope.launch { presetRepo.setActivePresetId(id) }
+    }
+
+    fun addPromptPreset(preset: PromptPreset) {
+        val updated = customPromptPresets.value.toMutableList().apply { add(preset) }
+        viewModelScope.launch { presetRepo.saveCustomPresets(updated) }
+    }
+
+    fun updatePromptPreset(preset: PromptPreset) {
+        val updated = customPromptPresets.value.map { if (it.id == preset.id) preset else it }
+        viewModelScope.launch { presetRepo.saveCustomPresets(updated) }
+    }
+
+    fun deletePromptPreset(id: String) {
+        val updated = customPromptPresets.value.filter { it.id != id }
+        // If deleted preset was active, switch to default
+        if (activePromptId.value == id) {
+            viewModelScope.launch { presetRepo.setActivePresetId(PROMPT_DEFAULT.id) }
+        }
+        viewModelScope.launch { presetRepo.saveCustomPresets(updated) }
     }
 }

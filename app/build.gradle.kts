@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.devtools.ksp")
 }
 
@@ -73,6 +74,9 @@ dependencies {
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // Kotlin Serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
     // Security Crypto (encrypted API key storage)
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
