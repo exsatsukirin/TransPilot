@@ -17,6 +17,12 @@ interface TranslationDao {
     @Insert
     suspend fun insert(record: TranslationRecord): Long
 
+    @Insert
+    suspend fun insertAll(records: List<TranslationRecord>)
+
+    @Query("SELECT COUNT(*) FROM translations")
+    suspend fun count(): Int
+
     @Update
     suspend fun update(record: TranslationRecord)
 

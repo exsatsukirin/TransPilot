@@ -18,6 +18,43 @@ class TranslatorViewModel(application: Application) : AndroidViewModel(applicati
     private val configRepo = ApiConfigRepository(application)
     private val llmClient = LlmClient()
 
+    init {
+        seedTestData()
+    }
+
+    private fun seedTestData() {
+        viewModelScope.launch {
+            val count = dao.count()
+            if (count < 1000) {
+                val samples = listOf(
+                    "Hello, how are you?" to "你好，你怎么样？",
+                    "The weather is beautiful today." to "今天天气真好。",
+                    "I love programming in Kotlin." to "我喜欢用Kotlin编程。",
+                    "Android development is fun." to "Android开发很有趣。",
+                    "Machine learning is transforming the world." to "机器学习正在改变世界。",
+                    "Have you tried the new feature?" to "你试过新功能了吗？",
+                    "This is a long text that should test the expand and collapse behavior of the history cards in the TransPilot application." to "这是一个长文本，用于测试TransPilot应用中历史卡片的展开和收起行为。",
+                    "The quick brown fox jumps over the lazy dog." to "敏捷的棕色狐狸跳过了懒惰的狗。",
+                    "Technology advances at an unprecedented pace." to "技术以空前的速度发展。",
+                    "Learning a new language opens up new opportunities." to "学习一门新语言打开了新的机会。"
+                )
+                val startTime = System.currentTimeMillis() - 1000L * 3600 * 24 * 30 // 30 days ago
+                val batch = (0 until 1000).map { i ->
+                    val (en, zh) = samples[i % samples.size]
+                    TranslationRecord(
+                        sourceText = en + " (#${i + 1})",
+                        translatedText = zh + " (#${i + 1})",
+                        sourceLang = if (i % 5 == 0) "自动检测" else "English",
+                        targetLang = listOf("Chinese", "Japanese", "French", "German", "Spanish")[i % 5],
+                        timestamp = startTime + i * 3600_000L, // 1 hour apart
+                        isFavorite = i % 7 == 0
+                    )
+                }
+                dao.insertAll(batch)
+            }
+        }
+    }
+
     // ── Config ──
     /** Single atomic state: holds both the ApiConfig and whether DataStore has loaded.
      *  Using one StateFlow guarantees config and loaded update together, avoiding
