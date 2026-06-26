@@ -3,6 +3,7 @@ package com.exsatsukirin.transpilot.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
@@ -17,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.exsatsukirin.transpilot.data.TranslationRecord
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,8 +76,11 @@ fun HistoryScreen(viewModel: TranslatorViewModel) {
             }
         } else {
             var expandedIds by remember { mutableStateOf(setOf<Long>()) }
+            val listState = rememberLazyListState()
+            val coroutineScope = rememberCoroutineScope()
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
+                state = listState,
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -85,8 +90,18 @@ fun HistoryScreen(viewModel: TranslatorViewModel) {
                         record = record,
                         isExpanded = isExpanded,
                         onToggle = {
-                            expandedIds = if (isExpanded) expandedIds - record.id
+                            val wasExpanded = isExpanded
+                            expandedIds = if (wasExpanded) expandedIds - record.id
                                           else expandedIds + record.id
+                            // When collapsing, scroll item into view to keep place
+                            if (wasExpanded) {
+                                val idx = history.indexOf(record)
+                                if (idx >= 0) {
+                                    coroutineScope.launch {
+                                        listState.animateScrollToItem(idx)
+                                    }
+                                }
+                            }
                         },
                         onToggleFavorite = { viewModel.toggleFavorite(record) },
                         onDelete = { viewModel.deleteRecord(record) }
