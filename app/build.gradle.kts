@@ -70,6 +70,10 @@ dependencies {
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
+    // ML Kit Text Recognition (on-device OCR)
+    implementation("com.google.mlkit:text-recognition:16.0.0")
+    implementation("com.google.mlkit:text-recognition-chinese:16.0.0")
+
     // OkHttp
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 

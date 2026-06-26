@@ -3,6 +3,7 @@ package com.exsatsukirin.transpilot.data
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -20,6 +21,7 @@ class ApiConfigRepository(private val context: Context) {
         val KEY_SOURCE_LANG = stringPreferencesKey("source_lang")
         val KEY_TARGET_LANG = stringPreferencesKey("target_lang")
         val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
+        val KEY_OVERLAY_ENABLED = booleanPreferencesKey("overlay_enabled")
     }
 
     val config: Flow<ApiConfig> = context.dataStore.data.map { prefs ->
@@ -41,6 +43,10 @@ class ApiConfigRepository(private val context: Context) {
 
     val themeMode: Flow<String> = context.dataStore.data.map { prefs ->
         prefs[KEY_THEME_MODE] ?: "system"
+    }
+
+    val overlayEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_OVERLAY_ENABLED] ?: false
     }
 
     suspend fun update(config: ApiConfig) {
@@ -67,6 +73,12 @@ class ApiConfigRepository(private val context: Context) {
     suspend fun setThemeMode(mode: String) {
         context.dataStore.edit { prefs ->
             prefs[KEY_THEME_MODE] = mode
+        }
+    }
+
+    suspend fun setOverlayEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_OVERLAY_ENABLED] = enabled
         }
     }
 }

@@ -1,5 +1,9 @@
 package com.exsatsukirin.transpilot.ui
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -8,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import com.exsatsukirin.transpilot.BuildConfig
 import com.exsatsukirin.transpilot.data.ApiConfig
 
@@ -18,6 +23,8 @@ fun SettingsScreen(viewModel: TranslatorViewModel) {
     val config = configState.config
     val configLoaded = configState.loaded
     val themeMode by viewModel.themeMode.collectAsState()
+    val overlayEnabled by viewModel.overlayEnabled.collectAsState()
+    val context = LocalContext.current
 
     if (!configLoaded) return
 
@@ -126,6 +133,42 @@ fun SettingsScreen(viewModel: TranslatorViewModel) {
         if (saved) {
             Spacer(modifier = Modifier.height(8.dp))
             Text("配置已保存 ✓", color = MaterialTheme.colorScheme.primary)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // ════════════════════════════════════════
+        // Section 3: 屏幕识别
+        // ════════════════════════════════════════
+        Text("屏幕识别", style = MaterialTheme.typography.titleLarge)
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("开启屏幕识别悬浮球", style = MaterialTheme.typography.bodyLarge)
+                Text("在其他应用上方显示翻译小球，点击捕获屏幕文字并翻译",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Switch(
+                checked = overlayEnabled,
+                onCheckedChange = { enabled ->
+                    if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                        && !Settings.canDrawOverlays(context)) {
+                        val intent = Intent(
+                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            Uri.parse("package:${context.packageName}")
+                        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        context.startActivity(intent)
+                    } else {
+                        viewModel.setOverlayEnabled(enabled)
+                    }
+                }
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
